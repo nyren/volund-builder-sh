@@ -26,6 +26,7 @@ IMAGE_PACKAGES="
     gzip
     less
     sed
+    shellcheck
     tar
 "
 
