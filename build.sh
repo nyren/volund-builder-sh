@@ -14,7 +14,7 @@ DEFAULT_REPO_PATH_RELEASE=volund-release
 
 IMAGES[main]="volund-builder-sh"
 
-IMAGE_BASE="mirror.gcr.io/library/alpine:3.24.1"
+IMAGE_BASE="mirror.gcr.io/library/alpine:3.24.3"
 IMAGE_PACKAGES="
     bash
     coreutils
