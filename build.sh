@@ -3,14 +3,14 @@
 set -e
 
 . volund/lib/core
-. volund/lib/version
-. volund/lib/opinionated
+. volund/lib/tools
+. volund/lib/microservice
 
-IMAGE_REGISTRY=ghcr.io/nyren
-IMAGE_REPO_PATHS[dev]=volund-dev
-IMAGE_REPO_PATHS[ci]=volund-ci
-IMAGE_REPO_PATHS[rc]=volund-rc
-IMAGE_REPO_PATHS[release]=volund-release
+DEFAULT_REGISTRY=ghcr.io/nyren
+DEFAULT_REPO_PATH_DEV=volund-dev
+DEFAULT_REPO_PATH_CI=volund-ci
+DEFAULT_REPO_PATH_RC=volund-rc
+DEFAULT_REPO_PATH_RELEASE=volund-release
 
 IMAGES[main]="volund-builder-sh"
 
@@ -33,19 +33,17 @@ IMAGE_PACKAGES="
 volund_default "clean init build verify publish"
 
 clean() {
-    volund_msg "==> clean"
     volund_clean
 }
 
 init() {
-    volund_msg "==> init"
     set_version_dev
     set_repo_dev
 }
 
 build() {
-    volund_msg "==> build"
     volund_runtime build \
+        ${NO_CACHE:+--no-cache} \
         -t "$v_main_image_ref" \
         -f Containerfile \
         --build-arg "IMAGE_BASE=${IMAGE_BASE}" \
@@ -54,8 +52,6 @@ build() {
 }
 
 verify() {
-    volund_msg "==> verify"
-
     # Add alias for the newly created builder image
     volund_image builder "$v_main_image_ref"
 
@@ -67,9 +63,8 @@ verify() {
 }
 
 publish() {
-    volund_msg "==> publish"
-    volund_runtime push "$v_main_image_ref"
-    echo "$v_main_image_ref"
+    publish_images
+    volund_msg $(volund_color bold yellow "$v_main_image_ref")
 }
 
 volund_main "$@"
