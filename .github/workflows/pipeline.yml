@@ -1,0 +1,42 @@
+name: pipeline
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: Clean
+        run: ./build.sh clean
+
+      - name: Init
+        run: ./build.sh init set_repo_ci
+
+      - name: Set release-candidate version and repository
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/release-'))
+        run:  ./build.sh set_version_rc set_repo_rc
+
+      - name: Build
+        run: ./build.sh build
+
+      - name: Verify
+        run: ./build.sh verify
+
+      - name: Publish
+        run: ./build.sh publish
