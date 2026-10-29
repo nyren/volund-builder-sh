@@ -1,0 +1,76 @@
+name: release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      VOLUND_RUNTIME: podman
+      VOLUND_GIT_CREDENTIALS: auto
+      VOLUND_GIT_USERNAME: x-access-token
+      VOLUND_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GIT_AUTHOR_NAME: github-actions[bot]
+      GIT_AUTHOR_EMAIL: github-ci@nyren.net
+      GIT_COMMITTER_NAME: github-actions[bot]
+      GIT_COMMITTER_EMAIL: github-ci@nyren.net
+      NO_CACHE: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require release branch
+        run: |
+          case "$GITHUB_REF" in
+            refs/heads/master|refs/heads/release-*) ;;
+            *)
+              echo "$GITHUB_REF: invalid branch for release"
+              exit 1
+              ;;
+          esac
+
+      - name: Set upstream
+        run: |
+          branch=${GITHUB_REF#refs/heads/}
+          git branch --set-upstream-to="origin/${branch}"
+
+      - name: Clean
+        run: ./build.sh clean
+
+      - name: Init
+        run: ./build.sh init set_version_release set_repo_release
+
+      - name: Build
+        run: ./build.sh build
+
+      - name: Verify
+        run: ./build.sh verify
+
+      - name: Log in to GitHub Container Registry
+        uses: redhat-actions/podman-login@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag
+        run: ./build.sh tag_release
+
+      - name: Publish
+        run: ./build.sh publish
+
+      - name: Bump version
+        run: ./build.sh bump_version
